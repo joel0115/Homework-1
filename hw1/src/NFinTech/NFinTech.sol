@@ -76,29 +76,61 @@ contract NFinTech is IERC721 {
 
     function setApprovalForAll(address operator, bool approved) external {
         // TODO: please add your implementaiton here
+        if(operator == address(0)){
+            revert();
+        }
+        emit ApprovalForAll(msg.sender, operator, approved);
+        _operatorApproval[msg.sender][operator] = approved;
     }
 
     function isApprovedForAll(address owner, address operator) public view returns (bool) {
         // TODO: please add your implementaiton here
+        return _operatorApproval[owner][operator];
     }
 
     function approve(address to, uint256 tokenId) external {
         // TODO: please add your implementaiton here
+        address owner = _owner[tokenId];
+        if(to == address(0)) revert();
+        if(owner != msg.sender && !isApprovedForAll(owner, msg.sender)) revert();
+
+        emit Approval(owner, to, tokenId);
+        _tokenApproval[tokenId] = to;
     }
 
     function getApproved(uint256 tokenId) public view returns (address operator) {
         // TODO: please add your implementaiton here
+        return _tokenApproval[tokenId];
     }
 
     function transferFrom(address from, address to, uint256 tokenId) public {
         // TODO: please add your implementaiton here
+        if(from == address(0) || to == address(0)) revert();
+
+        address owner = _owner[tokenId];
+        if(owner != msg.sender && !isApprovedForAll(owner, msg.sender) && msg.sender != getApproved(tokenId)){
+            revert();
+        }
+
+        _balances[from] -= 1;
+        _balances[to] += 1;
+        _owner[tokenId] = to;
+        emit Transfer(from, to, tokenId);
     }
 
-    function safeTransferFrom(address from, address to, uint256 tokenId, bytes calldata data) public {
+    
+    function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) public {
         // TODO: please add your implementaiton here
+        transferFrom(from, to, tokenId);
+        bytes4 val = IERC721TokenReceiver(to).onERC721Received(msg.sender, from, tokenId, data);
+
+        if(val != IERC721TokenReceiver(to).onERC721Received.selector){
+            revert();
+        }
     }
 
     function safeTransferFrom(address from, address to, uint256 tokenId) public {
         // TODO: please add your implementaiton here
+        safeTransferFrom(from, to, tokenId, "");
     }
 }
